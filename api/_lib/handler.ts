@@ -1,51 +1,113 @@
-import { clearLatest, corsHeaders, getLatest, isRealRadar, json, setLatest } from './store'
+const g = globalThis as typeof globalThis & {
+  __livingTreeRadar?: { h4: string; h1: string }
+}
 
-export async function handleRadar(
+function store() {
+  if (!g.__livingTreeRadar) g.__livingTreeRadar = { h4: '', h1: '' }
+  return g.__livingTreeRadar
+}
+
+export function getLatest(feed: 'h4' | 'h1') {
+  return store()[feed] || ''
+}
+
+export function setLatest(feed: 'h4' | 'h1', body: string) {
+  store()[feed] = body
+}
+
+export function clearLatest(feed: 'h4' | 'h1') {
+  store()[feed] = ''
+}
+
+export function isRealRadar(parsed: Record<string, unknown>, field: string) {
+  if (parsed.iso === 'test' || parsed.feed === 'test') return false
+  const value = parsed[field]
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+export function applyCors(res: { setHeader: (k: string, v: string) => void }) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+}
+
+type NodeReq = {
+  method?: string
+  query?: Record<string, string | string[] | undefined>
+  body?: unknown
+}
+
+type NodeRes = {
+  setHeader: (k: string, v: string) => void
+  status: (code: number) => NodeRes
+  json: (body: unknown) => void
+  send: (body: string) => void
+  end: (body?: string) => void
+}
+
+function actionFrom(req: NodeReq) {
+  const raw = req.query?.action
+  return Array.isArray(raw) ? raw[0] : raw || ''
+}
+
+function bodyText(req: NodeReq) {
+  if (typeof req.body === 'string') return req.body
+  if (req.body && typeof req.body === 'object') return JSON.stringify(req.body)
+  return ''
+}
+
+export function handleRadar(
   feed: 'h4' | 'h1',
   field: string,
-  request: Request,
-  action: string,
+  req: NodeReq,
+  res: NodeRes,
 ) {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders() })
+  applyCors(res)
+  if (req.method === 'OPTIONS') {
+    res.status(204).end()
+    return
   }
 
-  if (action === 'live' && request.method === 'POST') {
+  const action = actionFrom(req)
+
+  if (action === 'live' && req.method === 'POST') {
     try {
-      const body = await request.text()
-      const parsed = JSON.parse(body) as Record<string, unknown>
-      if (!isRealRadar(parsed, field)) return json({ ok: false, ignored: true })
-      setLatest(feed, body)
-      return json({ ok: true, [field]: parsed[field] })
+      const raw = bodyText(req)
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      if (!isRealRadar(parsed, field)) {
+        res.status(200).json({ ok: false, ignored: true })
+        return
+      }
+      setLatest(feed, raw)
+      res.status(200).json({ ok: true, [field]: parsed[field] })
+      return
     } catch {
-      return json({ ok: false }, 400)
+      res.status(400).json({ ok: false })
+      return
     }
   }
 
-  if (action === 'clear' && request.method === 'POST') {
+  if (action === 'clear' && req.method === 'POST') {
     clearLatest(feed)
-    return json({ ok: true })
+    res.status(200).json({ ok: true })
+    return
   }
 
   if (action === 'latest') {
     const latest = getLatest(feed)
-    return new Response(latest || 'null', {
-      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
-    })
+    res.setHeader('Content-Type', 'application/json')
+    res.status(200).send(latest || 'null')
+    return
   }
 
   if (action === 'stream') {
     const latest = getLatest(feed)
-    const payload = latest ? `data: ${latest}\n\n` : '\n'
-    return new Response(payload, {
-      headers: {
-        ...corsHeaders(),
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      },
-    })
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    res.status(200).send(latest ? `data: ${latest}\n\n` : '\n')
+    return
   }
 
-  return json({ ok: false, error: 'Not found' }, 404)
+  res.status(404).json({ ok: false, error: 'Not found' })
 }

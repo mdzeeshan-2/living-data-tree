@@ -65,7 +65,8 @@ export function useH1Radar(engine: TreeEngine, enabled: boolean) {
   useEffect(() => {
     if (!enabled) return undefined
     let active = true
-    const source = new EventSource('/h1-radar/stream')
+    const remote = !/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
+    const source = remote ? null : new EventSource('/h1-radar/stream')
 
     const handlePayload = (live: H4LiveSnapshot | null) => {
       if (!active || !live) return
@@ -125,11 +126,13 @@ export function useH1Radar(engine: TreeEngine, enabled: boolean) {
       })
     }
 
-    source.onmessage = (ev) => {
-      try {
-        handlePayload(JSON.parse(ev.data) as H4LiveSnapshot)
-      } catch {
-        /* ignore malformed */
+    if (source) {
+      source.onmessage = (ev) => {
+        try {
+          handlePayload(JSON.parse(ev.data) as H4LiveSnapshot)
+        } catch {
+          /* ignore malformed */
+        }
       }
     }
 
@@ -154,11 +157,11 @@ export function useH1Radar(engine: TreeEngine, enabled: boolean) {
           if (live && live.h1Bias) handlePayload(live as H4LiveSnapshot)
         })
         .catch(() => {})
-    }, 400)
+    }, remote ? 5000 : 400)
 
     return () => {
       active = false
-      source.close()
+      source?.close()
       window.clearInterval(poll)
       window.removeEventListener('message', onMessage)
     }

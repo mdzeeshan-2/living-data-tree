@@ -1,18 +1,5 @@
-import { corsHeaders } from '../_lib/store'
 import { handleRadar } from '../_lib/handler'
 
-type Props = { params: Promise<{ action: string }> }
-
-export async function GET(request: Request, props: Props) {
-  const { action } = await props.params
-  return handleRadar('h1', 'h1Bias', request, action)
-}
-
-export async function POST(request: Request, props: Props) {
-  const { action } = await props.params
-  return handleRadar('h1', 'h1Bias', request, action)
-}
-
-export function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders() })
+export default function handler(req: unknown, res: unknown) {
+  handleRadar('h1', 'h1Bias', req as never, res as never)
 }
