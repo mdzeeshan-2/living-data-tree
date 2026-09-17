@@ -97,7 +97,7 @@ export class Renderer {
     const breath = 1 + Math.sin(now * 0.0018) * 0.03
     const energy = this.treeEnergy(tree)
     const width = VISUAL.TRUNK_WIDTH * breath
-    const top: Vec2 = { x: Math.sin(now * 0.00045) * 3.4, y: VISUAL.TRUNK_HEIGHT }
+    const top: Vec2 = { x: 0, y: VISUAL.TRUNK_HEIGHT }
     const c1: Vec2 = { x: -11, y: VISUAL.TRUNK_HEIGHT * 0.28 }
     const c2: Vec2 = { x: 9, y: VISUAL.TRUNK_HEIGHT * 0.66 }
     const base: Vec2 = { x: 0, y: 6 }
@@ -216,6 +216,18 @@ export class Renderer {
       branch.seed,
       now,
     )
+    const tip = swayed[Math.max(0, Math.ceil((swayed.length - 1) * g))]
+    if (tip && g > 0.55) {
+      const radius = Math.max(2.4, segment.endWidth * 0.72)
+      ctx.beginPath()
+      ctx.arc(tip.x, tip.y, radius, 0, Math.PI * 2)
+      ctx.fillStyle = rgbToCss(color, 0.98)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(tip.x, tip.y, radius * 0.45, 0, Math.PI * 2)
+      ctx.fillStyle = rgbToCss(glow, 0.9)
+      ctx.fill()
+    }
   }
 
   private drawTwigs(
@@ -281,9 +293,9 @@ export class Renderer {
 
   private swayPoint(p: Vec2, now: number, seed: number, i: number): Vec2 {
     const n = valueNoise(now * 0.00035 + seed * 0.0001 + i * 0.07, seed)
-    const wind = Math.sin(now * 0.0007 + seed * 0.01 + i * 0.13) * 0.7 + (n - 0.5) * 1.1
-    const h = Math.max(0, p.y) / 180
-    return { x: p.x + wind * h * 5.5, y: p.y + Math.sin(now * 0.0009 + i) * h * 0.8 }
+    const wind = Math.sin(now * 0.0007 + seed * 0.01 + i * 0.13) * 0.35 + (n - 0.5) * 0.4
+    const h = Math.max(0, p.y) / 220
+    return { x: p.x + wind * h * 2.2, y: p.y }
   }
 
   private drawLeaf(ctx: CanvasRenderingContext2D, branch: Branch, leaf: Leaf, now: number): void {

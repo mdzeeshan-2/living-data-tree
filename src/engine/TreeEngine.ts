@@ -27,6 +27,7 @@ import { BranchEngine } from './BranchEngine'
 import { LeafEngine } from './LeafEngine'
 import { ParticleEngine } from './ParticleEngine'
 import { Renderer } from './Renderer'
+import { clearForest, loadForest, saveForest } from './treeStore'
 
 type SnapshotListener = (snapshot: EngineSnapshot) => void
 
@@ -71,8 +72,13 @@ export class TreeEngine {
   private canvas: HTMLCanvasElement | null = null
   private updateCount = 0
   inspectedTreeId: string | null = null
+  private restoring = false
+  private saveTimer = 0
+  private static readonly MAX_NODES = 32
 
-  constructor() {}
+  constructor() {
+    this.restoreForest()
+  }
 
   subscribe(listener: SnapshotListener): () => void {
     this.listeners.add(listener)
@@ -162,7 +168,7 @@ export class TreeEngine {
     const label = String.fromCharCode(65 + (this.nextTreeIndex % 26))
     this.nextTreeIndex++
     const tree: Tree = {
-      id: `tree-${label}-${start}`,
+      id: `tree-${Math.round(start * 1000)}`,
       label: `Tree ${label}`,
       startMinutes: start,
       endMinutes: start + VISUAL.TREE_LIFETIME_MINUTES,
@@ -190,6 +196,7 @@ export class TreeEngine {
     const startMinutes = clockMinutes(startMs)
     const tree = this.createTree(startMinutes, true)
     tree.startMs = startMs
+    tree.id = `tree-${startMs}`
     tree.endMs = startMs + H4_MS
     tree.endMinutes = startMinutes + VISUAL.TREE_LIFETIME_MINUTES
     tree.label = `4H ${formatDayStamp(startMs)}`
@@ -230,13 +237,15 @@ export class TreeEngine {
     branch.color = interp.color
     branch.strength = interp.strength
     branch.polarity = interp.polarity
-    if (previous != null) {
-      this.branches.replaceHourStem(branch, interp, this.nowMs || performance.now(), minutes)
+    if (this.wantsNode(branch, interp.bias)) {
+      this.branches.enqueue(branch, interp, minutes)
+      if (this.restoring) this.branches.flushInstant(branch, this.nowMs || performance.now())
     }
     this.appendLog(tree, sourceId, interp.bias, previous, interp.delta, ts)
     this.updateCount++
     this.layoutTrees()
     this.emitSnapshot()
+    this.scheduleSave()
   }
 
   updateHourCandle(ts: number, price: number): void {
@@ -345,6 +354,7 @@ export class TreeEngine {
     this.branches.resetIds()
     this.camera = { x: 0, y: 0, zoom: 1 }
     this.inspectedTreeId = null
+    clearForest()
     this.emitSnapshot()
   }
 
@@ -535,9 +545,10 @@ export class TreeEngine {
       branch.color = interp.color
       branch.strength = interp.strength
       branch.polarity = interp.polarity
-      if (previous != null) this.branches.enqueue(branch, interp, minutes)
+      if (this.wantsNode(branch, interp.bias)) this.branches.enqueue(branch, interp, minutes)
     }
     this.layoutTrees()
+    this.scheduleSave()
   }
 
   private tick(dtMs: number, ts: number): void {
@@ -645,6 +656,36 @@ export class TreeEngine {
       if (!best || dist < best.dist) best = { tree, dist }
     }
     return best?.tree ?? null
+  }
+
+  private wantsNode(branch: Branch, bias: number): boolean {
+    const queued = branch.pending[branch.pending.length - 1]
+    const last = queued?.interp.bias ?? branch.segments[branch.segments.length - 1]?.bias
+    if (last == null) return true
+    if (branch.segments.length + branch.pending.length >= TreeEngine.MAX_NODES) return false
+    return Math.abs(bias - last) >= 0.35
+  }
+
+  private scheduleSave(): void {
+    if (this.restoring || typeof window === 'undefined') return
+    window.clearTimeout(this.saveTimer)
+    this.saveTimer = window.setTimeout(() => saveForest(this.trees), 450)
+  }
+
+  private restoreForest(): void {
+    const stored = loadForest()
+    if (!stored.length) return
+    this.restoring = true
+    for (const item of stored) {
+      const tree = this.ensureLiveTree(item.startMs)
+      for (const [sourceId, nodes] of Object.entries(item.stems || {})) {
+        for (const node of nodes) {
+          this.applyLiveBias(sourceId, node.bias, item.startMs, node.previous)
+        }
+      }
+    }
+    this.restoring = false
+    this.emitSnapshot()
   }
 
   emitSnapshot(): void {

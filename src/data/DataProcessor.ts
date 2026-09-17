@@ -56,21 +56,25 @@ export function interpretBias(
 
   let leafCount = 2
   if (deltaMag >= 0.35) leafCount = 3
-  if (deltaMag >= 3) leafCount = 5
-  if (deltaMag >= 5) leafCount = 7
-  if (deltaMag >= 10) leafCount = 9
-  if (deltaMag >= 15) leafCount = 12
-  if (deltaMag >= 25) leafCount = 14
-  if (isReversal) leafCount += 3
-  if (previousBias == null) leafCount = Math.max(leafCount, 3 + Math.round(strength * 3))
+  if (deltaMag >= 3) leafCount = 4
+  if (deltaMag >= 5) leafCount = 6
+  if (deltaMag >= 10) leafCount = 8
+  if (isReversal) leafCount += 2
+  if (previousBias == null) leafCount = Math.max(leafCount, 3)
 
-  const stemColor = previousBias == null ? biasToColor(signed) : colorFromBiasDelta(delta)
+  const wood = { r: 124, g: 88, b: 54 }
+  const signal = previousBias == null ? biasToColor(signed) : colorFromBiasDelta(delta)
+  const stemColor = {
+    r: wood.r * 0.48 + signal.r * 0.52,
+    g: wood.g * 0.48 + signal.g * 0.52,
+    b: wood.b * 0.48 + signal.b * 0.52,
+  }
   const leafColor =
     delta > 0
-      ? { r: 196, g: 226, b: 72 }
+      ? { r: 186, g: 236, b: 52 }
       : delta < 0
-        ? { r: 232, g: 148, b: 48 }
-        : { r: 168, g: 158, b: 118 }
+        ? { r: 255, g: 176, b: 42 }
+        : { r: 132, g: 184, b: 86 }
 
   return {
     polarity,
@@ -99,13 +103,7 @@ export function segmentLength(interp: VisualInterpretation, isFirst: boolean): n
     VISUAL.MIN_SEGMENT_LENGTH,
     VISUAL.MAX_SEGMENT_LENGTH,
   )
-  const fromStrength = lerp(
-    VISUAL.MIN_SEGMENT_LENGTH,
-    VISUAL.MAX_SEGMENT_LENGTH * 0.72,
-    interp.strength,
-  )
-  const len = isFirst ? Math.max(fromDelta, fromStrength) : fromDelta * (0.55 + interp.strength * 0.45)
-  return isFirst ? Math.max(len, 108) : Math.max(len, 40)
+  return isFirst ? Math.max(fromDelta * 0.42, 46) : Math.max(fromDelta * 0.28, 16)
 }
 
 export function polarityLabel(polarity: VisualInterpretation['polarity']): string {

@@ -25,22 +25,22 @@ function sourceAngle(index: number, seed: number): number {
 function attachOrigin(sourceId: string, index: number, seed: number): Vec2 {
   const rng = createRng(seed ^ 0xabc)
   if (sourceId === 'source-1') {
-    return { x: -38 + (rng() - 0.5) * 2, y: 86 + (rng() - 0.5) * 4 }
+    return { x: -34 + (rng() - 0.5) * 1.2, y: 224 + (rng() - 0.5) * 2 }
   }
   if (sourceId === 'source-2') {
-    return { x: 38 + (rng() - 0.5) * 2, y: 86 + (rng() - 0.5) * 4 }
+    return { x: 34 + (rng() - 0.5) * 1.2, y: 224 + (rng() - 0.5) * 2 }
   }
   if (sourceId === 'source-3') {
-    return { x: 0 + (rng() - 0.5) * 2, y: 48 + (rng() - 0.5) * 4 }
+    return { x: 0 + (rng() - 0.5) * 1.2, y: 248 + (rng() - 0.5) * 2 }
   }
   const slots = [
-    { x: -8, y: 198 },
-    { x: -22, y: 92 },
-    { x: 18, y: 168 },
-    { x: 20, y: 108 },
+    { x: -18, y: 198 },
+    { x: 18, y: 198 },
+    { x: -8, y: 168 },
+    { x: 8, y: 168 },
   ]
   const slot = slots[index % slots.length]
-  return { x: slot.x + (rng() - 0.5) * 5, y: slot.y + (rng() - 0.5) * 6 }
+  return { x: slot.x + (rng() - 0.5) * 2, y: slot.y + (rng() - 0.5) * 2 }
 }
 
 function stemDirection(
@@ -50,15 +50,15 @@ function stemDirection(
   seed: number,
   isFirst: boolean,
   prevDir: number,
+  nodeIndex: number,
 ): number {
-  const rng = createRng(seed ^ 0x5f3759df)
-  const side = sourceId === 'source-1' ? -0.22 : sourceId === 'source-2' ? 0.22 : sourceId === 'source-3' ? 0 : 0
-  const jitter = (rng() - 0.5) * 0.07
+  const rng = createRng(seed ^ 0x5f3759df ^ (nodeIndex * 997))
+  const side = sourceId === 'source-1' ? -0.62 : sourceId === 'source-2' ? 0.62 : sourceId === 'source-3' ? 0.04 : 0
   const signed = delta !== 0 ? delta : bias
-  if (signed === 0 && !isFirst) return prevDir * 0.86 + side * 0.2 + jitter
-  const vertical = signed < 0 ? Math.PI : 0
-  if (isFirst) return vertical + side + jitter
-  return vertical * 0.84 + prevDir * 0.16 + side * 0.35 + jitter
+  const tilt = signed < 0 ? 0.42 : -0.16
+  const spread = (rng() - 0.5) * 0.18 + (nodeIndex % 2 === 0 ? -0.08 : 0.08)
+  if (isFirst) return tilt * 0.35 + side + spread * 0.4
+  return prevDir * 0.72 + side * 0.18 + tilt * 0.22 + spread
 }
 
 export class BranchEngine {
@@ -101,13 +101,20 @@ export class BranchEngine {
     branch.pending.push({ interp, simMinutes })
   }
 
-  replaceHourStem(branch: Branch, interp: VisualInterpretation, nowMs: number, simMinutes: number): void {
-    branch.pending.length = 0
-    this.leaves.releaseBranch(branch)
-    branch.segments.length = 0
-    this.spawnSegment(branch, { interp, simMinutes }, nowMs)
-    const last = branch.segments[branch.segments.length - 1]
-    if (last) last.growth = 0.22
+  flushInstant(branch: Branch, nowMs: number): void {
+    while (branch.pending.length) {
+      const next = branch.pending.shift()
+      if (!next) break
+      this.spawnSegment(branch, next, nowMs)
+      const last = branch.segments[branch.segments.length - 1]
+      if (last) last.growth = 1
+      for (const leaf of branch.leaves) {
+        if (last && leaf.segmentId === last.id) {
+          leaf.scale = leaf.targetScale
+          leaf.opacity = 0.92
+        }
+      }
+    }
   }
 
   update(tree: Tree, dtMs: number, nowMs: number): void {
@@ -132,17 +139,18 @@ export class BranchEngine {
     const last = branch.segments[branch.segments.length - 1]
     const start: Vec2 = last ? { x: last.end.x, y: last.end.y } : { x: branch.origin.x, y: branch.origin.y }
     const isFirst = !last
-    const rng = createRng(branch.seed + branch.segments.length * 7919 + ((interp.bias * 10) | 0))
+    const rng = createRng(branch.seed + branch.segments.length * 7919)
     const prevDir = last ? last.direction : branch.baseAngle
     const direction = stemDirection(
       branch.sourceId,
       interp.delta,
       interp.bias,
-      branch.seed + branch.segments.length,
+      branch.seed,
       isFirst,
       prevDir,
+      branch.segments.length,
     )
-    const len = Math.max(148, segmentLength(interp, true) * 1.15)
+    const len = segmentLength(interp, isFirst)
     const end = {
       x: start.x + Math.sin(direction) * len,
       y: start.y + Math.cos(direction) * len,
@@ -161,7 +169,7 @@ export class BranchEngine {
     const points: Vec2[] = []
     sampleBezier(start, c1, c2, end, VISUAL.BEZIER_SAMPLES, points)
     const twigs = []
-    const twigCount = interp.deltaNorm > 0.12 ? 1 + Math.floor(rng() * (interp.isReversal ? 2 : 1)) : 0
+    const twigCount = 1 + (interp.deltaNorm > 0.18 ? 1 : 0) + (interp.isReversal ? 1 : 0)
     for (let i = 0; i < twigCount; i++) {
       const t = 0.45 + rng() * 0.42
       const along = points[Math.min(points.length - 1, Math.floor(t * (points.length - 1)))]
