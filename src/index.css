@@ -324,7 +324,7 @@ button.active {
   position: absolute;
   top: 24px;
   right: 24px;
-  width: min(360px, 42vw);
+  width: min(430px, 48vw);
   padding: 14px 16px 12px;
   background: rgba(6, 10, 14, 0.78);
   border: 1px solid var(--line);
@@ -336,6 +336,10 @@ button.active {
 
 .radar-bias-row.two-source {
   grid-template-columns: 1fr 1fr;
+}
+
+.radar-bias-row.three-source {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .radar-bias-row small {

@@ -23,7 +23,7 @@ export const VISUAL = {
 export const SOURCE_SLOTS = [
   { id: 'source-1', label: '4H stem · h4_bias', angle: -0.18 },
   { id: 'source-2', label: '1H stem · h1_bias', angle: 0.18 },
-  { id: 'source-3', label: 'Source 3', angle: 0.92 },
+  { id: 'source-3', label: '30m stem · bias', angle: 0 },
 ] as const
 
 export const EXTRA_ANGLES = [-0.38, 0.42, -1.58, 1.62, 2.28, -2.7]

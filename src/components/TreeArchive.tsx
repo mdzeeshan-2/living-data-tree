@@ -41,7 +41,7 @@ export function TreeArchive({
           {snapshot.inspectedLog.map((entry, index) => (
             <div key={`${entry.ts}-${entry.sourceId}-${index}`} className={`log-row ${entry.tone}`}>
               <span>{entry.iso}</span>
-              <b>{entry.sourceId === 'source-1' ? '4H' : entry.sourceId === 'source-2' ? '1H' : entry.sourceId}</b>
+              <b>{entry.sourceId === 'source-1' ? '4H' : entry.sourceId === 'source-2' ? '1H' : entry.sourceId === 'source-3' ? '30m' : entry.sourceId}</b>
               <em>
                 {entry.bias.toFixed(2)}
                 {entry.delta ? ` ${entry.delta > 0 ? '+' : ''}${entry.delta.toFixed(2)}` : ''}

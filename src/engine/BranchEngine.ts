@@ -30,6 +30,9 @@ function attachOrigin(sourceId: string, index: number, seed: number): Vec2 {
   if (sourceId === 'source-2') {
     return { x: 38 + (rng() - 0.5) * 2, y: 86 + (rng() - 0.5) * 4 }
   }
+  if (sourceId === 'source-3') {
+    return { x: 0 + (rng() - 0.5) * 2, y: 48 + (rng() - 0.5) * 4 }
+  }
   const slots = [
     { x: -8, y: 198 },
     { x: -22, y: 92 },
@@ -49,7 +52,7 @@ function stemDirection(
   prevDir: number,
 ): number {
   const rng = createRng(seed ^ 0x5f3759df)
-  const side = sourceId === 'source-1' ? -0.22 : sourceId === 'source-2' ? 0.22 : 0
+  const side = sourceId === 'source-1' ? -0.22 : sourceId === 'source-2' ? 0.22 : sourceId === 'source-3' ? 0 : 0
   const jitter = (rng() - 0.5) * 0.07
   const signed = delta !== 0 ? delta : bias
   if (signed === 0 && !isFirst) return prevDir * 0.86 + side * 0.2 + jitter

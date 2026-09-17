@@ -16,6 +16,12 @@ export function parseH1Bias(live: H4LiveSnapshot | null): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+export function parseH30Bias(live: H4LiveSnapshot | null): number | null {
+  if (!live) return null
+  const n = Number(String(live.h30Bias ?? live.bias ?? '').replace(/[^\d.+-]/g, ''))
+  return Number.isFinite(n) ? n : null
+}
+
 export function parsePrice(live: H4LiveSnapshot | null): number | null {
   if (!live?.price) return null
   const n = Number(String(live.price).replace(/[^\d.+-]/g, ''))

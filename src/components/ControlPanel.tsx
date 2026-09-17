@@ -54,7 +54,7 @@ export function ControlPanel(props: Props) {
             checked={props.liveRadar}
             onChange={(e) => props.onLiveRadar(e.target.checked)}
           />
-          Live radar · 4H + 1H stems
+          Live radar · 4H + 1H + 30m stems
         </label>
       </section>
       <DataInput

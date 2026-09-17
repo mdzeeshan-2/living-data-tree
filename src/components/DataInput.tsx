@@ -41,7 +41,7 @@ export function DataInput({
         <input value={timestamp} onChange={(e) => onTimestamp(e.target.value)} placeholder="09:30" />
       </label>
       {sources
-        .filter((source) => !liveRadar || source.id === 'source-1' || source.id === 'source-2')
+        .filter((source) => !liveRadar || source.id === 'source-1' || source.id === 'source-2' || source.id === 'source-3')
         .map((source) => (
         <label key={source.id}>
           {source.label}
@@ -49,7 +49,7 @@ export function DataInput({
             type="number"
             step="0.01"
             value={source.bias}
-            readOnly={!!liveRadar && (source.id === 'source-1' || source.id === 'source-2')}
+            readOnly={!!liveRadar && (source.id === 'source-1' || source.id === 'source-2' || source.id === 'source-3')}
             onChange={(e) => onBias(source.id, e.target.value)}
           />
         </label>

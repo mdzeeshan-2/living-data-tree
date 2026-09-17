@@ -20,6 +20,7 @@ export function h4RadarBridge(): Plugin {
   const feeds: Feed[] = [
     { prefix: '/h4-radar', field: 'h4Bias', latest: '', clients: new Set() },
     { prefix: '/h1-radar', field: 'h1Bias', latest: '', clients: new Set() },
+    { prefix: '/h30-radar', field: 'h30Bias', latest: '', clients: new Set() },
   ]
 
   function cors(res: ServerResponse) {

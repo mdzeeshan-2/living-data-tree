@@ -160,6 +160,8 @@ export interface H4LiveSnapshot {
   h4Color?: string
   h1Bias?: string
   h1Color?: string
+  h30Bias?: string | number
+  bias?: string | number
   d1Bias?: string
   d1Color?: string
   marketState?: string

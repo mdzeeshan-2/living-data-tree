@@ -368,7 +368,8 @@ export class Renderer {
       )
       const dim = engine.selectedSourceId != null && engine.selectedSourceId !== id
       ctx.fillStyle = dim ? 'rgba(180,200,210,0.12)' : 'rgba(230, 245, 250, 0.85)'
-      const label = id === 'source-1' ? '4H STEM' : id === 'source-2' ? '1H STEM' : id.toUpperCase()
+      const label =
+        id === 'source-1' ? '4H STEM' : id === 'source-2' ? '1H STEM' : id === 'source-3' ? '30M STEM' : id.toUpperCase()
       ctx.fillText(label, tip.x, -tip.y - 14)
     }
     ctx.restore()

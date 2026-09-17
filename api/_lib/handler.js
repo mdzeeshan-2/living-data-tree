@@ -1,7 +1,7 @@
 const g = globalThis
 
 function bucket() {
-  if (!g.__livingTreeRadar) g.__livingTreeRadar = { h4: '', h1: '' }
+  if (!g.__livingTreeRadar) g.__livingTreeRadar = { h4: '', h1: '', h30: '' }
   return g.__livingTreeRadar
 }
 

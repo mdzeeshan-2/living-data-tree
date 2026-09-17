@@ -10,6 +10,7 @@ import { TreeInfo } from './components/TreeInfo'
 import { DEFAULT_SOURCES } from './config/visualConfig'
 import { useH1Radar } from './hooks/useH1Radar'
 import { useH4Radar } from './hooks/useH4Radar'
+import { useH30Radar } from './hooks/useH30Radar'
 import { useSimulation } from './hooks/useSimulation'
 import { useTreeEngine } from './hooks/useTreeEngine'
 import { formatClock, parseClock } from './utils/mathUtils'
@@ -17,7 +18,7 @@ import { formatClock, parseClock } from './utils/mathUtils'
 const SOURCE_META = [
   { id: 'source-1', label: '4H stem · h4_bias' },
   { id: 'source-2', label: '1H stem · h1_bias' },
-  { id: 'source-3', label: 'Source 3' },
+  { id: 'source-3', label: '30m stem · bias' },
 ]
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
   const [liveRadar, setLiveRadar] = useState(true)
   const radar = useH4Radar(engine, liveRadar)
   const h1Radar = useH1Radar(engine, liveRadar)
+  const h30Radar = useH30Radar(engine, liveRadar)
   const [timestamp, setTimestamp] = useState('09:30')
   const [biases, setBiases] = useState<Record<string, string>>({
     'source-1': '-20',
@@ -46,9 +48,11 @@ export default function App() {
             ? String(radar.bias)
             : s.id === 'source-2' && h1Radar.bias != null
               ? String(h1Radar.bias)
-              : (biases[s.id] ?? '0'),
+              : s.id === 'source-3' && h30Radar.bias != null
+                ? String(h30Radar.bias)
+                : (biases[s.id] ?? '0'),
       })),
-    [biases, radar.bias, h1Radar.bias],
+    [biases, radar.bias, h1Radar.bias, h30Radar.bias],
   )
 
   useEffect(() => {
@@ -129,7 +133,7 @@ export default function App() {
     })
   }
 
-  const waiting = snapshot.waiting && !radar.connected && !h1Radar.connected
+  const waiting = snapshot.waiting && !radar.connected && !h1Radar.connected && !h30Radar.connected
 
   return (
     <div className="app">
@@ -143,10 +147,12 @@ export default function App() {
               ? new Date(radar.live.ts).toLocaleTimeString('en-GB', { hour12: false })
               : h1Radar.live?.ts
                 ? new Date(h1Radar.live.ts).toLocaleTimeString('en-GB', { hour12: false })
+              : h30Radar.live?.ts
+                ? new Date(h30Radar.live.ts).toLocaleTimeString('en-GB', { hour12: false })
                 : snapshot.simulatedTime
           }
         />
-        {liveRadar && <RadarHud h4={radar} h1={h1Radar} />}
+        {liveRadar && <RadarHud h4={radar} h1={h1Radar} h30={h30Radar} />}
         <TreeArchive snapshot={snapshot} onInspect={(id) => engine.inspectTree(id)} />
         <BlunderBanner
           alerts={[
@@ -157,7 +163,7 @@ export default function App() {
         {waiting && (
           <div className="waiting-overlay">
             <div>WAITING FOR RADAR</div>
-            <span>Reload the 4H and 1H logger extensions. 4H grows the left stem, 1H grows the right stem. Old 4H trees stay archived.</span>
+            <span>Reload the 4H, 1H, and 30m logger extensions. 4H grows the left stem, 1H the right, 30m the center. Old 4H trees stay archived.</span>
           </div>
         )}
         <Tooltip info={hover} />
