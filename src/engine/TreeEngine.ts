@@ -120,8 +120,8 @@ export class TreeEngine {
     const height = parent.clientHeight
     this.canvasWidth = width
     this.canvasHeight = height
-    const fit = Math.min(width * 0.42, height * 0.58) / 240
-    this.viewScale = Math.max(0.85, Math.min(2.1, fit))
+    const fit = Math.min(width * 0.36, height * 0.5) / 260
+    this.viewScale = Math.max(0.72, Math.min(1.85, fit))
     canvas.width = Math.max(1, Math.floor(width * dpr))
     canvas.height = Math.max(1, Math.floor(height * dpr))
     canvas.style.width = `${width}px`
@@ -385,7 +385,7 @@ export class TreeEngine {
     this.camera.zoom = Math.min(3.4, Math.max(0.35, this.camera.zoom * factor))
     const zoom = this.camera.zoom * this.viewScale
     this.camera.x = (screenX - this.canvasWidth * 0.5) / zoom - world.x
-    this.camera.y = (this.canvasHeight * 0.78 - screenY) / zoom - world.y
+    this.camera.y = (this.canvasHeight * 0.86 - screenY) / zoom - world.y
   }
 
   pan(dx: number, dy: number): void {
@@ -412,7 +412,7 @@ export class TreeEngine {
     const zoom = this.camera.zoom * this.viewScale
     return {
       x: this.canvasWidth * 0.5 + (x + this.camera.x) * zoom,
-      y: this.canvasHeight * 0.78 - (y + this.camera.y) * zoom,
+      y: this.canvasHeight * 0.86 - (y + this.camera.y) * zoom,
     }
   }
 
@@ -420,7 +420,7 @@ export class TreeEngine {
     const zoom = this.camera.zoom * this.viewScale || 1
     return {
       x: (x - this.canvasWidth * 0.5) / zoom - this.camera.x,
-      y: (this.canvasHeight * 0.78 - y) / zoom - this.camera.y,
+      y: (this.canvasHeight * 0.86 - y) / zoom - this.camera.y,
     }
   }
 

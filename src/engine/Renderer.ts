@@ -37,7 +37,7 @@ export class Renderer {
       ctx.moveTo(x, 0)
       ctx.lineTo(x, h)
     }
-    for (let y = (h * 0.78) % gap; y < h; y += gap) {
+    for (let y = (h * 0.86) % gap; y < h; y += gap) {
       ctx.moveTo(0, y)
       ctx.lineTo(w, y)
     }
@@ -47,7 +47,7 @@ export class Renderer {
 
   private drawWorld(ctx: CanvasRenderingContext2D, engine: TreeEngine): void {
     ctx.save()
-    ctx.translate(engine.canvasWidth * 0.5, engine.canvasHeight * 0.78)
+    ctx.translate(engine.canvasWidth * 0.5, engine.canvasHeight * 0.86)
     const zoom = engine.camera.zoom * engine.viewScale
     ctx.scale(zoom, -zoom)
     ctx.translate(engine.camera.x, engine.camera.y)
