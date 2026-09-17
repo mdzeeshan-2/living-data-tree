@@ -34,11 +34,14 @@ export function RadarHud({
   h1,
   h30,
 }: {
-  h4: RadarView
-  h1: RadarView
-  h30: RadarView
+  h4?: RadarView | null
+  h1?: RadarView | null
+  h30?: RadarView | null
 }) {
-  const live = h4.connected || h1.connected || h30.connected
+  const a = h4
+  const b = h1
+  const c = h30
+  const live = !!(a?.connected || b?.connected || c?.connected)
   return (
     <section className="radar-hud">
       <div className="radar-kicker">
@@ -47,12 +50,12 @@ export function RadarHud({
         <em>{live ? 'LIVE' : 'WAITING'}</em>
       </div>
       <div className="radar-bias-row three-source">
-        <StemCell title="4H stem" view={h4} />
-        <StemCell title="1H stem" view={h1} />
-        <StemCell title="30m stem" view={h30} />
+        {a && <StemCell title="4H stem" view={a} />}
+        {b && <StemCell title="1H stem" view={b} />}
+        {c && <StemCell title="30m stem" view={c} />}
       </div>
       <div className="hour-grid">
-        {h4.hours.map((mark) => (
+        {h4?.hours?.map((mark) => (
           <div key={`h4-${mark.hour}`} className={`hour-cell ${Number.isFinite(mark.bias) ? mark.tone : 'empty'}`}>
             <span>4H H{mark.hour + 1} {mark.label}</span>
             <b>{Number.isFinite(mark.bias) ? mark.bias.toFixed(2) : 'waiting'}</b>
@@ -65,9 +68,9 @@ export function RadarHud({
         ))}
       </div>
       <div className="radar-meta">
-        <span>{h4.live?.action || h1.live?.action || 'Bias only on 30m'}</span>
-        <span>{h1.live?.price || h4.live?.price ? `BTC ${h1.live?.price || h4.live?.price}` : ''}</span>
-        <span>{h30.updatedAt || h1.updatedAt || h4.updatedAt}</span>
+        <span>{h4?.live?.action || h1?.live?.action || 'Bias only on 30m'}</span>
+        <span>{h1?.live?.price || h4?.live?.price ? `BTC ${h1?.live?.price || h4?.live?.price}` : ''}</span>
+        <span>{h30?.updatedAt || h1?.updatedAt || h4?.updatedAt}</span>
       </div>
       {!live && (
         <p className="radar-help">

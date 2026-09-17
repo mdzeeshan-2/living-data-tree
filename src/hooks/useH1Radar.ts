@@ -40,15 +40,16 @@ function applyLive(
 ): { grew: boolean } {
   const bias = parseH1Bias(live)
   const ts = live.ts || Date.now()
-  if (bias == null || lastHourBias == null) {
+  if (bias == null) {
     engine.syncLiveClock(ts)
     return { grew: false }
   }
+  const previous = lastHourBias ?? bias
   const now = Date.now()
   const moved = lastShown == null || Math.abs(bias - lastShown) >= 0.08
   const due = now - lastGrowAt > 800
   if (moved && (lastShown == null || due)) {
-    engine.applyLiveBias('source-2', bias, ts, lastHourBias)
+    engine.applyLiveBias('source-2', bias, ts, previous)
     return { grew: true }
   }
   engine.syncLiveClock(ts)

@@ -3,5 +3,15 @@
     { "source": "/h4-radar/:path*", "destination": "/api/h4-radar/:path*" },
     { "source": "/h1-radar/:path*", "destination": "/api/h1-radar/:path*" },
     { "source": "/h30-radar/:path*", "destination": "/api/h30-radar/:path*" }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    }
   ]
 }

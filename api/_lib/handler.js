@@ -9,6 +9,7 @@ function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Cache-Control', 'no-store')
 }
 
 function actionOf(req) {
@@ -26,7 +27,32 @@ function bodyText(req) {
   return ''
 }
 
-export function handleRadar(feed, field, req, res) {
+async function persist(feed, raw) {
+  bucket()[feed] = raw
+  try {
+    const { getCache } = await import('@vercel/functions')
+    await getCache({ namespace: 'living-tree' }).set(feed, raw, {
+      ttl: 86400,
+      tags: ['radar', feed],
+    })
+  } catch {
+    /* local Vite and cache misses still use memory */
+  }
+}
+
+async function readLatest(feed) {
+  try {
+    const { getCache } = await import('@vercel/functions')
+    const cached = await getCache({ namespace: 'living-tree' }).get(feed)
+    if (typeof cached === 'string' && cached) return cached
+    if (cached && typeof cached === 'object') return JSON.stringify(cached)
+  } catch {
+    /* fall through */
+  }
+  return bucket()[feed] || ''
+}
+
+export async function handleRadar(feed, field, req, res) {
   cors(res)
   if (req.method === 'OPTIONS') {
     res.status(204).end()
@@ -43,7 +69,7 @@ export function handleRadar(feed, field, req, res) {
         res.status(200).json({ ok: false, ignored: true })
         return
       }
-      bucket()[feed] = raw
+      await persist(feed, raw)
       res.status(200).json({ ok: true, [field]: parsed[field] })
       return
     } catch {
@@ -53,20 +79,20 @@ export function handleRadar(feed, field, req, res) {
   }
 
   if (action === 'clear' && req.method === 'POST') {
-    bucket()[feed] = ''
+    await persist(feed, '')
     res.status(200).json({ ok: true })
     return
   }
 
   if (action === 'latest') {
-    const latest = bucket()[feed] || ''
+    const latest = await readLatest(feed)
     res.setHeader('Content-Type', 'application/json')
     res.status(200).send(latest || 'null')
     return
   }
 
   if (action === 'stream') {
-    const latest = bucket()[feed] || ''
+    const latest = await readLatest(feed)
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.status(200).send(latest ? `data: ${latest}\n\n` : '\n')

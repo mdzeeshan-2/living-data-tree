@@ -163,7 +163,7 @@ export default function App() {
         {waiting && (
           <div className="waiting-overlay">
             <div>WAITING FOR RADAR</div>
-            <span>Reload the 4H, 1H, and 30m logger extensions. 4H grows the left stem, 1H the right, 30m the center. Old 4H trees stay archived.</span>
+            <span>Reload the 4H, 1H, and 30m logger extensions, then refresh this page. 4H grows the left stem, 1H the right, 30m the center.</span>
           </div>
         )}
         <Tooltip info={hover} />
