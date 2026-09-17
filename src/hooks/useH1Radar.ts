@@ -10,6 +10,8 @@ import {
   parsePrice,
   seedHourCandlesFromBinance,
   updateHourAnchor,
+  closeStamp,
+  HOUR_MS,
   windowStart,
 } from '../data/h4Radar'
 import { formatClock } from '../utils/mathUtils'
@@ -91,7 +93,7 @@ export function useH1Radar(engine: TreeEngine, enabled: boolean) {
         hourMarks.current = ensureHourMark(hourMarks.current, ts, bias)
         const anchor = updateHourAnchor('living-tree-hour-h1', ts, bias)
         lastHourBias = anchor.prevClose
-        lastHourLabel = anchor.prevHourStart ? formatStamp(anchor.prevHourStart + 60 * 60 * 1000 - 60_000) : '—'
+        lastHourLabel = closeStamp(anchor.prevHourStart, HOUR_MS)
         if (lastHourBias == null) {
           const live = engine.trees.find((tree) => tree.startMs === start)
           lastHourBias = engine.lastBiasFromArchive('source-2', live?.id ?? null)

@@ -3,6 +3,7 @@ import { toneFromDelta } from './DataProcessor'
 
 export const H4_MS = 4 * 60 * 60 * 1000
 export const HOUR_MS = 60 * 60 * 1000
+export const M30_MS = 30 * 60 * 1000
 
 export function parseH4Bias(live: H4LiveSnapshot | null): number | null {
   if (!live) return null
@@ -59,6 +60,15 @@ export function hourStartMs(ts: number): number {
   return Math.floor(ts / HOUR_MS) * HOUR_MS
 }
 
+export function periodStartMs(ts: number, periodMs: number): number {
+  return Math.floor(ts / periodMs) * periodMs
+}
+
+export function closeStamp(prevPeriodStart: number | null, periodMs: number): string {
+  if (prevPeriodStart == null) return '—'
+  return formatStamp(prevPeriodStart + periodMs - 60_000)
+}
+
 export function hourIndex(ts: number, start: number): number {
   return Math.min(3, Math.max(0, Math.floor((ts - start) / HOUR_MS)))
 }
@@ -90,15 +100,20 @@ function writeAnchor(key: string, anchor: HourAnchor): void {
   }
 }
 
-export function updateHourAnchor(key: string, ts: number, bias: number): HourAnchor {
-  const hour = hourStartMs(ts)
+export function updatePeriodAnchor(
+  key: string,
+  ts: number,
+  bias: number,
+  periodMs: number,
+): HourAnchor {
+  const start = periodStartMs(ts, periodMs)
   const stored = readAnchor(key)
   let next: HourAnchor
   if (!stored) {
-    next = { hourStart: hour, close: bias, prevClose: null, prevHourStart: null }
-  } else if (stored.hourStart !== hour) {
+    next = { hourStart: start, close: bias, prevClose: null, prevHourStart: null }
+  } else if (stored.hourStart !== start) {
     next = {
-      hourStart: hour,
+      hourStart: start,
       close: bias,
       prevClose: stored.close,
       prevHourStart: stored.hourStart,
@@ -108,6 +123,10 @@ export function updateHourAnchor(key: string, ts: number, bias: number): HourAnc
   }
   writeAnchor(key, next)
   return next
+}
+
+export function updateHourAnchor(key: string, ts: number, bias: number): HourAnchor {
+  return updatePeriodAnchor(key, ts, bias, HOUR_MS)
 }
 
 export function ensureHourMark(

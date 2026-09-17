@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  closeStamp,
   formatStamp,
   formatStampFull,
-  hourTable,
   parseH30Bias,
-  ensureHourMark,
-  updateHourAnchor,
+  updatePeriodAnchor,
   windowStart,
+  M30_MS,
 } from '../data/h4Radar'
 import type { TreeEngine } from '../engine/TreeEngine'
-import type { H4LiveSnapshot, HourMark } from '../models/types'
+import type { H4LiveSnapshot } from '../models/types'
 import type { RadarView } from './useH4Radar'
 
 const EMPTY: RadarView = {
@@ -56,7 +56,6 @@ export function useH30Radar(engine: TreeEngine, enabled: boolean) {
   const lastShown = useRef<number | null>(null)
   const lastGrowAt = useRef(0)
   const lastWindow = useRef(0)
-  const hourMarks = useRef<HourMark[]>([])
 
   useEffect(() => {
     if (!enabled) return undefined
@@ -71,47 +70,33 @@ export function useH30Radar(engine: TreeEngine, enabled: boolean) {
       const ts = live.ts || Date.now()
       const start = windowStart(ts)
       if (start !== lastWindow.current) {
-        hourMarks.current = []
         lastShown.current = null
         lastWindow.current = start
         engine.ensureLiveTree(start)
       }
       const bias = parseH30Bias(live)
-      let lastHourBias: number | null = null
+      let lastBarBias: number | null = null
       let lastHourLabel = '—'
       if (bias != null) {
-        hourMarks.current = ensureHourMark(hourMarks.current, ts, bias)
-        const anchor = updateHourAnchor('living-tree-hour-h30', ts, bias)
-        lastHourBias = anchor.prevClose
-        lastHourLabel = anchor.prevHourStart ? formatStamp(anchor.prevHourStart + 60 * 60 * 1000 - 60_000) : '—'
-        if (lastHourBias == null) {
-          const tree = engine.trees.find((item) => item.startMs === start)
-          lastHourBias = engine.lastBiasFromArchive('source-3', tree?.id ?? null)
-          if (lastHourBias != null) lastHourLabel = 'last tree'
-        }
-        if (lastHourBias == null) {
-          const open = hourMarks.current.find((mark) => Number.isFinite(mark.bias))
-          if (open && Math.abs(open.bias - bias) > 0.0001) {
-            lastHourBias = open.bias
-            lastHourLabel = open.label
-          }
-        }
-        const result = applyLive(engine, live, lastHourBias, lastShown.current, lastGrowAt.current)
+        const anchor = updatePeriodAnchor('living-tree-m30-h30', ts, bias, M30_MS)
+        lastBarBias = anchor.prevClose
+        lastHourLabel = closeStamp(anchor.prevHourStart, M30_MS)
+        const result = applyLive(engine, live, lastBarBias, lastShown.current, lastGrowAt.current)
         if (result.grew) {
           lastShown.current = bias
           lastGrowAt.current = Date.now()
         }
       }
       const current = bias
-      const tickDelta = current != null && lastHourBias != null ? current - lastHourBias : 0
+      const tickDelta = current != null && lastBarBias != null ? current - lastBarBias : 0
       setView({
         connected: true,
         live,
         bias: current,
-        previousBias: lastHourBias,
+        previousBias: lastBarBias,
         delta: tickDelta,
         lastHourLabel,
-        hours: hourTable(start, hourMarks.current),
+        hours: [],
         windowLabel: `${formatStamp(start)}–${formatStamp(start + 4 * 60 * 60 * 1000)}`,
         blunders: [],
         updatedAt: live.iso || formatStampFull(ts),

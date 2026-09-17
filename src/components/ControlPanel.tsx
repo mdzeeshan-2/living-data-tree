@@ -45,7 +45,7 @@ export function ControlPanel(props: Props) {
       <header className="panel-header">
         <div className="kicker">ORGANISM</div>
         <h1>Living Tree</h1>
-        <p>Each stem compares live bias with last hour’s close. Green goes up, red goes down.</p>
+        <p>4H and 1H compare live bias with last hour’s :29 close. 30m compares with the previous 30-minute close (:29 or :59). Green goes up, red goes down.</p>
       </header>
       <section className="panel-block">
         <label className="check">

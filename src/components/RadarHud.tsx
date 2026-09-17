@@ -9,12 +9,15 @@ function toneClass(delta: number) {
 function StemCell({
   title,
   view,
+  versus,
 }: {
   title: string
   view: RadarView
+  versus: 'hour' | '30m'
 }) {
   const tone = toneClass(view.delta)
   const shown = view.bias == null ? '—' : view.bias.toFixed(2)
+  const prior = versus === '30m' ? 'last 30m' : 'last hour'
   return (
     <div>
       <span>
@@ -22,7 +25,7 @@ function StemCell({
       </span>
       <strong className={tone}>{shown}</strong>
       <small className={tone}>
-        last hour {view.previousBias == null ? '—' : view.previousBias.toFixed(2)} · {view.delta >= 0 ? '+' : ''}
+        {prior} {view.previousBias == null ? '—' : view.previousBias.toFixed(2)} · {view.delta >= 0 ? '+' : ''}
         {view.delta.toFixed(2)} {view.delta > 0 ? 'UP' : view.delta < 0 ? 'DOWN' : 'FLAT'}
       </small>
     </div>
@@ -50,9 +53,9 @@ export function RadarHud({
         <em>{live ? 'LIVE' : 'WAITING'}</em>
       </div>
       <div className="radar-bias-row three-source">
-        {a && <StemCell title="4H stem" view={a} />}
-        {b && <StemCell title="1H stem" view={b} />}
-        {c && <StemCell title="30m stem" view={c} />}
+        {a && <StemCell title="4H stem" view={a} versus="hour" />}
+        {b && <StemCell title="1H stem" view={b} versus="hour" />}
+        {c && <StemCell title="30m stem" view={c} versus="30m" />}
       </div>
       <div className="hour-grid">
         {h4?.hours?.map((mark) => (
