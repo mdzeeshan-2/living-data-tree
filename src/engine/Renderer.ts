@@ -102,9 +102,9 @@ export class Renderer {
     const c2: Vec2 = { x: 9, y: VISUAL.TRUNK_HEIGHT * 0.66 }
     const base: Vec2 = { x: 0, y: 6 }
     const bark = {
-      r: 102 + energy.r * 0.18,
-      g: 82 + energy.g * 0.14,
-      b: 68 + energy.b * 0.1,
+      r: 138 + energy.r * 0.16,
+      g: 108 + energy.g * 0.12,
+      b: 78 + energy.b * 0.08,
     }
     this.drawRoots(ctx, now, bark)
     const points: Vec2[] = []

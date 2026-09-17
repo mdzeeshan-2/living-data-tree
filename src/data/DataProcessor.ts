@@ -103,7 +103,7 @@ export function segmentLength(interp: VisualInterpretation, isFirst: boolean): n
     VISUAL.MIN_SEGMENT_LENGTH,
     VISUAL.MAX_SEGMENT_LENGTH,
   )
-  return isFirst ? Math.max(fromDelta * 0.42, 46) : Math.max(fromDelta * 0.28, 16)
+  return isFirst ? Math.max(fromDelta * 0.72, 96) : Math.max(fromDelta * 0.34, 22)
 }
 
 export function polarityLabel(polarity: VisualInterpretation['polarity']): string {

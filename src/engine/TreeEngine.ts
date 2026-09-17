@@ -239,7 +239,9 @@ export class TreeEngine {
     branch.polarity = interp.polarity
     if (this.wantsNode(branch, interp.bias)) {
       this.branches.enqueue(branch, interp, minutes)
-      if (this.restoring) this.branches.flushInstant(branch, this.nowMs || performance.now())
+      if (this.restoring || branch.segments.length === 0) {
+        this.branches.flushInstant(branch, this.nowMs || performance.now())
+      }
     }
     this.appendLog(tree, sourceId, interp.bias, previous, interp.delta, ts)
     this.updateCount++
@@ -545,7 +547,12 @@ export class TreeEngine {
       branch.color = interp.color
       branch.strength = interp.strength
       branch.polarity = interp.polarity
-      if (this.wantsNode(branch, interp.bias)) this.branches.enqueue(branch, interp, minutes)
+      if (this.wantsNode(branch, interp.bias)) {
+        this.branches.enqueue(branch, interp, minutes)
+        if (branch.segments.length === 0) {
+          this.branches.flushInstant(branch, this.nowMs || performance.now())
+        }
+      }
     }
     this.layoutTrees()
     this.scheduleSave()

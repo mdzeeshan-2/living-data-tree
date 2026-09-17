@@ -28,9 +28,13 @@ export function TreeCanvas({ engine, onHover }: Props) {
     }
     window.addEventListener('resize', onResize)
     canvas.addEventListener('wheel', onWheel, { passive: false })
+    const ro = new ResizeObserver(onResize)
+    if (canvas.parentElement) ro.observe(canvas.parentElement)
+    onResize()
     return () => {
       window.removeEventListener('resize', onResize)
       canvas.removeEventListener('wheel', onWheel)
+      ro.disconnect()
       engine.detach()
     }
   }, [engine])
