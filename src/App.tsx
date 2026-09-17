@@ -36,6 +36,7 @@ export default function App() {
   })
   const [debug, setDebug] = useState(false)
   const [autoSessions, setAutoSessions] = useState(true)
+  const [phoneOpen, setPhoneOpen] = useState(false)
   const [, bump] = useState(0)
 
   const sources = useMemo(
@@ -136,7 +137,10 @@ export default function App() {
   const waiting = snapshot.waiting && !radar.connected && !h1Radar.connected && !h30Radar.connected
 
   return (
-    <div className="app">
+    <div className={`app ${phoneOpen ? 'phone-open' : ''}`}>
+      <button type="button" className="phone-fab" onClick={() => setPhoneOpen(true)}>
+        Details
+      </button>
       <main className="stage">
         <TreeCanvas engine={engine} onHover={bumpHover} />
         <TreeInfo
@@ -152,14 +156,6 @@ export default function App() {
                 : snapshot.simulatedTime
           }
         />
-        {liveRadar && <RadarHud h4={radar} h1={h1Radar} h30={h30Radar} />}
-        <TreeArchive snapshot={snapshot} onInspect={(id) => engine.inspectTree(id)} />
-        <BlunderBanner
-          alerts={[
-            ...radar.blunders.map((alert) => ({ ...alert, field: `4H ${alert.field}` })),
-            ...h1Radar.blunders.map((alert) => ({ ...alert, field: `1H ${alert.field}` })),
-          ]}
-        />
         {waiting && (
           <div className="waiting-overlay">
             <div>WAITING FOR RADAR</div>
@@ -171,37 +167,54 @@ export default function App() {
           <DebugPanel snapshot={snapshot} animationCount={engine.animation.activeCount} />
         )}
       </main>
-      <ControlPanel
-        timestamp={timestamp}
-        sources={sources}
-        presetPlaying={sim.presetPlaying}
-        running={sim.running}
-        intervalSec={sim.intervalSec}
-        timeScale={sim.timeScale}
-        autoSessions={autoSessions}
-        debug={debug}
-        liveRadar={liveRadar}
-        onLiveRadar={setLiveRadar}
-        onTimestamp={setTimestamp}
-        onBias={(id, value) => setBiases((prev) => ({ ...prev, [id]: value }))}
-        onSend={handleSend}
-        onNewTree={() => engine.ingest({ type: 'CREATE_TREE', timestamp })}
-        onClear={handleClear}
-        onRandom={handleRandom}
-        onPreset={(name) => sim.playPreset(name, timestamp)}
-        onStart={sim.start}
-        onStop={sim.stop}
-        onReset={handleReset}
-        onInterval={sim.changeInterval}
-        onTimeScale={sim.changeTimeScale}
-        onAutoSessions={(value) => {
-          setAutoSessions(value)
-          if (!liveRadar) engine.setAutoSessions(value)
-        }}
-        onToggleDebug={() => setDebug((v) => !v)}
-        onResetView={() => engine.resetView()}
-        onZoom={(factor) => engine.zoomAt(engine.canvasWidth / 2, engine.canvasHeight / 2, factor)}
-      />
+      <button type="button" className="phone-scrim" aria-label="Close details" onClick={() => setPhoneOpen(false)} />
+      <div className="chrome-layer">
+        <div className="phone-drawer-bar">
+          <span>Details</span>
+          <button type="button" onClick={() => setPhoneOpen(false)}>
+            Minimize
+          </button>
+        </div>
+        {liveRadar && <RadarHud h4={radar} h1={h1Radar} h30={h30Radar} />}
+        <TreeArchive snapshot={snapshot} onInspect={(id) => engine.inspectTree(id)} />
+        <BlunderBanner
+          alerts={[
+            ...radar.blunders.map((alert) => ({ ...alert, field: `4H ${alert.field}` })),
+            ...h1Radar.blunders.map((alert) => ({ ...alert, field: `1H ${alert.field}` })),
+          ]}
+        />
+        <ControlPanel
+          timestamp={timestamp}
+          sources={sources}
+          presetPlaying={sim.presetPlaying}
+          running={sim.running}
+          intervalSec={sim.intervalSec}
+          timeScale={sim.timeScale}
+          autoSessions={autoSessions}
+          debug={debug}
+          liveRadar={liveRadar}
+          onLiveRadar={setLiveRadar}
+          onTimestamp={setTimestamp}
+          onBias={(id, value) => setBiases((prev) => ({ ...prev, [id]: value }))}
+          onSend={handleSend}
+          onNewTree={() => engine.ingest({ type: 'CREATE_TREE', timestamp })}
+          onClear={handleClear}
+          onRandom={handleRandom}
+          onPreset={(name) => sim.playPreset(name, timestamp)}
+          onStart={sim.start}
+          onStop={sim.stop}
+          onReset={handleReset}
+          onInterval={sim.changeInterval}
+          onTimeScale={sim.changeTimeScale}
+          onAutoSessions={(value) => {
+            setAutoSessions(value)
+            if (!liveRadar) engine.setAutoSessions(value)
+          }}
+          onToggleDebug={() => setDebug((v) => !v)}
+          onResetView={() => engine.resetView()}
+          onZoom={(factor) => engine.zoomAt(engine.canvasWidth / 2, engine.canvasHeight / 2, factor)}
+        />
+      </div>
     </div>
   )
 }
