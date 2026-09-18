@@ -91,6 +91,8 @@ export class BranchEngine {
       color: { r: 96, g: 90, b: 112 },
       lastUpdateMinutes: startMinutes,
       startMinutes,
+      anchorBias: null,
+      anchorLabel: '',
     }
     tree.sources[sourceId] = branch
     tree.sourceOrder.push(sourceId)

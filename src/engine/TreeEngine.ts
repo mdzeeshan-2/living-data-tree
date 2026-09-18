@@ -1,6 +1,14 @@
 import { VISUAL } from '../config/visualConfig'
 import { interpretBias, toneFromDelta } from '../data/DataProcessor'
-import { clockMinutes, formatDayStamp, formatStamp, formatStampFull, H4_MS, hourIndex, HOUR_MS, windowStart } from '../data/h4Radar'
+import { clockMinutes, formatStampFull, H4_MS, hourIndex, HOUR_MS, windowStart } from '../data/h4Radar'
+import {
+  formatDateLong,
+  localTimeZoneName,
+  sourceMeta,
+  treeAnchorStamp,
+  treeCaption,
+  treeWindow,
+} from '../data/treeMeta'
 import { nextSessionStart } from '../data/SimulationProvider'
 import type {
   Branch,
@@ -9,6 +17,7 @@ import type {
   EngineSnapshot,
   HoverInfo,
   SourceDebug,
+  StemDetail,
   TimeScale,
   Tree,
   TreeLogEntry,
@@ -190,6 +199,7 @@ export class TreeEngine {
     const existing = this.trees.find((t) => t.startMs === startMs)
     if (existing) {
       existing.growing = !existing.endMs || Date.now() < existing.endMs
+      existing.label = treeCaption(existing)
       this.layoutTrees()
       return existing
     }
@@ -199,7 +209,7 @@ export class TreeEngine {
     tree.id = `tree-${startMs}`
     tree.endMs = startMs + H4_MS
     tree.endMinutes = startMinutes + VISUAL.TREE_LIFETIME_MINUTES
-    tree.label = `4H ${formatDayStamp(startMs)}`
+    tree.label = treeCaption(tree)
     for (const other of this.trees) {
       if (other !== tree && other.startMs != null) other.growing = false
     }
@@ -224,6 +234,7 @@ export class TreeEngine {
     const minutes = clockMinutes(ts)
     const branch = this.branches.ensureBranch(tree, sourceId, minutes)
     const previous = previousOverride ?? (branch.history.length ? branch.currentBias : null)
+    this.lockAnchor(tree, branch, previous)
     const interp = interpretBias(bias, previous)
     if (previous != null) branch.previousBias = previous
     else branch.previousBias = bias
@@ -302,9 +313,25 @@ export class TreeEngine {
   }
 
   inspectTree(id: string | null): void {
-    this.inspectedTreeId = id
-    this.layoutTrees()
-    this.emitSnapshot()
+    if (!id) {
+      this.inspectedTreeId = null
+      this.selectedSourceId = null
+      this.resetView()
+      this.layoutTrees()
+      this.emitSnapshot()
+      return
+    }
+    const tree = this.trees.find((item) => item.id === id)
+    if (!tree) return
+    if (this.inspectedTreeId === id && this.camera.zoom > 1.5) {
+      this.inspectedTreeId = null
+      this.selectedSourceId = null
+      this.resetView()
+      this.layoutTrees()
+      this.emitSnapshot()
+      return
+    }
+    this.focusTree(tree, 2.35)
   }
 
   lastBiasFromArchive(sourceId: string, liveTreeId: string | null): number | null {
@@ -378,19 +405,27 @@ export class TreeEngine {
 
   resetView(): void {
     this.camera = { x: 0, y: 0, zoom: 1 }
+    this.emitSnapshot()
   }
 
   zoomAt(screenX: number, screenY: number, factor: number): void {
+    if (!this.canvasWidth || !this.canvasHeight) return
     const world = this.screenToWorld(screenX, screenY)
-    this.camera.zoom = Math.min(3.4, Math.max(0.35, this.camera.zoom * factor))
+    this.camera.zoom = Math.min(8, Math.max(0.45, this.camera.zoom * factor))
     const zoom = this.camera.zoom * this.viewScale
     this.camera.x = (screenX - this.canvasWidth * 0.5) / zoom - world.x
     this.camera.y = (this.canvasHeight * 0.86 - screenY) / zoom - world.y
+    this.emitSnapshot()
+  }
+
+  zoomBy(factor: number): void {
+    this.zoomAt(this.canvasWidth * 0.5, this.canvasHeight * 0.58, factor)
   }
 
   pan(dx: number, dy: number): void {
-    this.camera.x += dx / this.camera.zoom
-    this.camera.y -= dy / this.camera.zoom
+    const zoom = this.camera.zoom * this.viewScale || 1
+    this.camera.x += dx / zoom
+    this.camera.y -= dy / zoom
   }
 
   handleHover(screenX: number, screenY: number): void {
@@ -400,11 +435,32 @@ export class TreeEngine {
 
   handleClick(screenX: number, screenY: number): void {
     const hit = this.hitTest(screenX, screenY)
-    this.selectedSourceId = hit ? hit.sourceId : null
-    const treeHit = this.hitTree(screenX, screenY)
-    if (treeHit) this.inspectedTreeId = treeHit.id
-    else if (!hit) this.inspectedTreeId = null
+    const treeHit = hit
+      ? this.trees.find((tree) => tree.id === hit.treeId) ?? this.hitTree(screenX, screenY)
+      : this.hitTree(screenX, screenY)
+    if (hit && treeHit) {
+      this.selectedSourceId = hit.sourceId
+      this.focusTree(treeHit, Math.max(2.5, this.camera.zoom))
+      return
+    }
+    if (treeHit) {
+      this.selectedSourceId = null
+      this.focusTree(treeHit, this.inspectedTreeId === treeHit.id ? Math.min(8, this.camera.zoom * 1.45) : 2.25)
+      return
+    }
+    this.selectedSourceId = null
+    this.inspectedTreeId = null
+    this.resetView()
     this.layoutTrees()
+    this.emitSnapshot()
+  }
+
+  focusTree(tree: Tree, zoomLevel: number): void {
+    this.inspectedTreeId = tree.id
+    this.layoutTrees()
+    this.camera.zoom = Math.min(8, Math.max(1.6, zoomLevel))
+    this.camera.x = 0
+    this.camera.y = -40
     this.emitSnapshot()
   }
 
@@ -453,11 +509,7 @@ export class TreeEngine {
       simulatedTime: formatClock(this.simulatedMinutes),
       simulatedMinutes: this.simulatedMinutes,
       activeTreeId: active?.id ?? null,
-      activeTreeLabel: active
-        ? active.startMs
-          ? `${active.label}–${formatStamp(active.endMs ?? active.startMs + H4_MS)}`
-          : `${active.label} ${formatClockShort(active.startMinutes)}–${formatClockShort(active.endMinutes)}`
-        : '—',
+      activeTreeLabel: active ? treeCaption(active) : '—',
       treeAgeMinutes: active ? Math.max(0, this.simulatedMinutes - active.startMinutes) : 0,
       treeCount: this.trees.length,
       sourceCount: active?.sourceOrder.length ?? 0,
@@ -472,8 +524,8 @@ export class TreeEngine {
       trees: this.trees.map((t) => ({
         id: t.id,
         label: t.label,
-        start: t.startMs ? formatDayStamp(t.startMs) : formatClockShort(t.startMinutes),
-        end: t.endMs ? formatDayStamp(t.endMs) : formatClockShort(t.endMinutes),
+        start: t.startMs ? formatDateLong(t.startMs) : formatClockShort(t.startMinutes),
+        end: t.startMs ? `${treeWindow(t)} ${localTimeZoneName(t.startMs)}` : formatClockShort(t.endMinutes),
         growing: t.growing,
         age: Math.max(0, this.simulatedMinutes - t.startMinutes),
         candles: (t.hourCandles ?? []).map((c) => ({ ...c })),
@@ -482,6 +534,8 @@ export class TreeEngine {
       selectedSourceId: this.selectedSourceId,
       inspectedTreeId: this.inspectedTreeId,
       inspectedLog: [...(this.focusedTree()?.log ?? [])].slice(-80).reverse(),
+      cameraZoom: this.camera.zoom,
+      stemDetail: this.buildStemDetail(),
     }
   }
 
@@ -534,6 +588,7 @@ export class TreeEngine {
       if (!tree.growing) continue
       const branch = this.branches.ensureBranch(tree, sourceId, minutes)
       const previous = previousOverride ?? (branch.history.length ? branch.currentBias : null)
+      this.lockAnchor(tree, branch, previous)
       const interp = interpretBias(bias, previous)
       if (previous != null) branch.previousBias = previous
       else branch.previousBias = bias
@@ -626,13 +681,15 @@ export class TreeEngine {
         const branch = tree.sources[id]
         for (const segment of branch.segments) {
           const d = distToPolyline(local, segment.points, Math.max(0.08, segment.growth))
-          const threshold = (10 + segment.endWidth) / (this.camera.zoom * this.viewScale * sc)
+          const threshold = (16 + segment.endWidth) / Math.max(0.2, this.camera.zoom * this.viewScale * sc)
           if (d < threshold && (!best || d < best.dist)) best = { branch, tree, dist: d }
         }
       }
     }
     if (!best) return null
     const { branch, tree } = best
+    const meta = sourceMeta(branch.sourceId)
+    const zone = localTimeZoneName(tree.startMs ?? Date.now())
     return {
       treeId: tree.id,
       sourceId: branch.sourceId,
@@ -640,12 +697,20 @@ export class TreeEngine {
       screenY,
       bias: branch.currentBias,
       previousBias: branch.previousBias,
-      delta: branch.currentBias - branch.previousBias,
+      delta: branch.currentBias - (branch.anchorBias ?? branch.previousBias),
       polarity: branch.polarity,
       strength: branch.strength,
       startTime: formatClockShort(branch.startMinutes),
       lastUpdate: formatClockShort(branch.lastUpdateMinutes),
       ageMinutes: Math.max(0, this.simulatedMinutes - branch.startMinutes),
+      title: meta.title,
+      date: tree.startMs ? formatDateLong(tree.startMs) : tree.label,
+      window: treeWindow(tree),
+      zone,
+      anchorLabel: branch.anchorLabel || treeAnchorStamp(tree),
+      anchorField: meta.field,
+      anchorBias: branch.anchorBias,
+      live: tree.growing,
     }
   }
 
@@ -658,11 +723,51 @@ export class TreeEngine {
         x: (world.x - tree.layout.x) / sc,
         y: (world.y - tree.layout.y) / sc,
       }
-      if (Math.abs(local.x) > 36 || local.y < -24 || local.y > VISUAL.TRUNK_HEIGHT + 36) continue
-      const dist = Math.hypot(local.x, local.y - VISUAL.TRUNK_HEIGHT * 0.45)
+      if (Math.abs(local.x) > 120 || local.y < -48 || local.y > VISUAL.TRUNK_HEIGHT + 220) continue
+      const dist = Math.hypot(local.x, local.y - VISUAL.TRUNK_HEIGHT * 0.55)
       if (!best || dist < best.dist) best = { tree, dist }
     }
     return best?.tree ?? null
+  }
+
+  private lockAnchor(tree: Tree, branch: Branch, previous: number | null): void {
+    if (!branch.anchorLabel) branch.anchorLabel = treeAnchorStamp(tree)
+    if (branch.anchorBias == null && previous != null) branch.anchorBias = previous
+  }
+
+  private buildStemDetail(): StemDetail | null {
+    if (!this.selectedSourceId) return null
+    const tree = this.focusedTree()
+    if (!tree) return null
+    const branch = tree.sources[this.selectedSourceId]
+    if (!branch) return null
+    const meta = sourceMeta(branch.sourceId)
+    const anchorBias = branch.anchorBias
+    const current = branch.currentBias
+    const delta = current - (anchorBias ?? current)
+    return {
+      treeId: tree.id,
+      sourceId: branch.sourceId,
+      title: meta.title,
+      date: tree.startMs ? formatDateLong(tree.startMs) : tree.label,
+      window: treeWindow(tree),
+      zone: localTimeZoneName(tree.startMs ?? Date.now()),
+      live: tree.growing,
+      anchorLabel: branch.anchorLabel || treeAnchorStamp(tree),
+      anchorField: meta.field,
+      anchorBias,
+      currentBias: current,
+      delta,
+      history: (tree.log ?? [])
+        .filter((entry) => entry.sourceId === branch.sourceId)
+        .slice(-30)
+        .map((entry) => ({
+          time: entry.iso.slice(0, 5),
+          bias: entry.bias,
+          delta: entry.delta,
+          tone: entry.tone,
+        })),
+    }
   }
 
   private wantsNode(branch: Branch, bias: number): boolean {
@@ -685,9 +790,12 @@ export class TreeEngine {
     this.restoring = true
     for (const item of stored) {
       const tree = this.ensureLiveTree(item.startMs)
-      for (const [sourceId, nodes] of Object.entries(item.stems || {})) {
-        for (const node of nodes) {
-          this.applyLiveBias(sourceId, node.bias, item.startMs, node.previous)
+      for (const [sourceId, stem] of Object.entries(item.stems || {})) {
+        const nodes = stem.nodes ?? []
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i]
+          const previous = i === 0 ? (stem.anchorBias ?? node.previous) : node.previous
+          this.applyLiveBias(sourceId, node.bias, item.startMs, previous)
         }
       }
     }

@@ -1,3 +1,4 @@
+import { formatDateLong, localTimeZoneName, sourceMeta, treeWindow } from '../data/treeMeta'
 import { VISUAL } from '../config/visualConfig'
 import type { Branch, Leaf, RGB, Segment, Tree, Vec2 } from '../models/types'
 import { glowOf, rgbToCss } from '../utils/colorUtils'
@@ -87,9 +88,16 @@ export class Renderer {
     ctx.save()
     ctx.scale(1, -1)
     ctx.textAlign = 'center'
+    ctx.fillStyle = tree.growing ? 'rgba(210, 230, 240, 0.62)' : 'rgba(180, 200, 220, 0.78)'
+    const date = tree.startMs ? formatDateLong(tree.startMs) : tree.label
+    const window = treeWindow(tree)
+    const zone = localTimeZoneName(tree.startMs ?? Date.now())
     ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace'
-    ctx.fillStyle = tree.growing ? 'rgba(210, 230, 240, 0.45)' : 'rgba(180, 200, 220, 0.7)'
-    ctx.fillText(tree.growing ? 'LIVE 4H TREE' : 'ARCHIVED 4H TREE', 0, 28)
+    ctx.fillText(date, 0, 26)
+    ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace'
+    ctx.fillText(`${window} ${zone}`, 0, 40)
+    ctx.fillStyle = tree.growing ? 'rgba(58, 224, 138, 0.75)' : 'rgba(180, 200, 220, 0.55)'
+    ctx.fillText(tree.growing ? 'LIVE' : 'PAST', 0, 54)
     ctx.restore()
   }
 
@@ -366,8 +374,8 @@ export class Renderer {
   private drawSourceLabels(ctx: CanvasRenderingContext2D, tree: Tree, engine: TreeEngine): void {
     ctx.save()
     ctx.scale(1, -1)
-    ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace'
     ctx.textAlign = 'center'
+    const zoomed = engine.camera.zoom >= 1.25 || engine.selectedSourceId != null
     for (const id of tree.sourceOrder) {
       const branch = tree.sources[id]
       const last = branch.segments[branch.segments.length - 1]
@@ -378,11 +386,20 @@ export class Renderer {
         branch.seed,
         20,
       )
-      const dim = engine.selectedSourceId != null && engine.selectedSourceId !== id
-      ctx.fillStyle = dim ? 'rgba(180,200,210,0.12)' : 'rgba(230, 245, 250, 0.85)'
-      const label =
-        id === 'source-1' ? '4H STEM' : id === 'source-2' ? '1H STEM' : id === 'source-3' ? '30M STEM' : id.toUpperCase()
-      ctx.fillText(label, tip.x, -tip.y - 14)
+      const selected = engine.selectedSourceId === id
+      const dim = engine.selectedSourceId != null && !selected
+      ctx.fillStyle = dim ? 'rgba(180,200,210,0.18)' : 'rgba(230, 245, 250, 0.9)'
+      const meta = sourceMeta(id)
+      ctx.font = selected ? '11px ui-monospace, SFMono-Regular, Menlo, monospace' : '10px ui-monospace, SFMono-Regular, Menlo, monospace'
+      ctx.fillText(meta.title, tip.x, -tip.y - (zoomed ? 28 : 14))
+      if (zoomed) {
+        const anchor = branch.anchorBias == null ? '—' : branch.anchorBias.toFixed(1)
+        const now = branch.currentBias.toFixed(1)
+        const stamp = branch.anchorLabel || 'open'
+        ctx.fillStyle = dim ? 'rgba(180,200,210,0.16)' : 'rgba(190, 220, 210, 0.9)'
+        ctx.font = '9px ui-monospace, SFMono-Regular, Menlo, monospace'
+        ctx.fillText(`${stamp} ${meta.field} ${anchor} → ${now}`, tip.x, -tip.y - 14)
+      }
     }
     ctx.restore()
   }

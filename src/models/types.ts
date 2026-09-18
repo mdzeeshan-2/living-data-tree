@@ -99,6 +99,8 @@ export interface Branch {
   color: RGB
   lastUpdateMinutes: number
   startMinutes: number
+  anchorBias: number | null
+  anchorLabel: string
 }
 
 export interface BiasSample {
@@ -281,6 +283,31 @@ export interface EngineSnapshot {
   selectedSourceId: string | null
   inspectedTreeId: string | null
   inspectedLog: TreeLogEntry[]
+  cameraZoom: number
+  stemDetail: StemDetail | null
+}
+
+export interface StemHistoryEntry {
+  time: string
+  bias: number
+  delta: number
+  tone: 'green' | 'red' | 'neutral'
+}
+
+export interface StemDetail {
+  treeId: string
+  sourceId: string
+  title: string
+  date: string
+  window: string
+  zone: string
+  live: boolean
+  anchorLabel: string
+  anchorField: string
+  anchorBias: number | null
+  currentBias: number
+  delta: number
+  history: StemHistoryEntry[]
 }
 
 export interface HoverInfo {
@@ -296,6 +323,14 @@ export interface HoverInfo {
   startTime: string
   lastUpdate: string
   ageMinutes: number
+  title: string
+  date: string
+  window: string
+  zone: string
+  anchorLabel: string
+  anchorField: string
+  anchorBias: number | null
+  live: boolean
 }
 
 export type TimeScale = 1 | 5 | 15

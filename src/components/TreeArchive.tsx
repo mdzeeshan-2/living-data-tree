@@ -12,7 +12,7 @@ export function TreeArchive({
   return (
     <section className="tree-archive">
       <div className="radar-kicker">4H TREES</div>
-      <p>Every 4 hours starts a new tree. Old trees stay here with their logs.</p>
+      <p>Every 4 hours starts a new tree. Tap one to zoom into its date, window, and stem history.</p>
       <div className="archive-list">
         {trees.length === 0 && <div className="archive-empty">No 4H tree yet.</div>}
         {trees.map((tree) => (
@@ -21,9 +21,9 @@ export function TreeArchive({
             className={`archive-item ${tree.growing ? 'live' : 'archived'} ${inspected === tree.id ? 'selected' : ''}`}
             onClick={() => onInspect(inspected === tree.id ? null : tree.id)}
           >
-            <strong>{tree.label}</strong>
+            <strong>{tree.start}</strong>
             <span>
-              {tree.start}–{tree.end} · {tree.growing ? 'live' : 'kept'}
+              {tree.end} · {tree.growing ? 'live' : 'past'}
             </span>
             <div className="archive-candles">
               {[0, 1, 2, 3].map((hour) => {

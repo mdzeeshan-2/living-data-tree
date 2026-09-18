@@ -3,10 +3,12 @@ import { BlunderBanner } from './components/BlunderBanner'
 import { ControlPanel } from './components/ControlPanel'
 import { DebugPanel } from './components/DebugPanel'
 import { RadarHud } from './components/RadarHud'
+import { StemDetail } from './components/StemDetail'
 import { Tooltip } from './components/Tooltip'
 import { TreeArchive } from './components/TreeArchive'
 import { TreeCanvas } from './components/TreeCanvas'
 import { TreeInfo } from './components/TreeInfo'
+import { ZoomBar } from './components/ZoomBar'
 import { DEFAULT_SOURCES } from './config/visualConfig'
 import { useH1Radar } from './hooks/useH1Radar'
 import { useH4Radar } from './hooks/useH4Radar'
@@ -211,10 +213,23 @@ export default function App() {
             if (!liveRadar) engine.setAutoSessions(value)
           }}
           onToggleDebug={() => setDebug((v) => !v)}
-          onResetView={() => engine.resetView()}
-          onZoom={(factor) => engine.zoomAt(engine.canvasWidth / 2, engine.canvasHeight / 2, factor)}
+          onResetView={() => engine.inspectTree(null)}
+          onZoom={(factor) => engine.zoomBy(factor)}
         />
       </div>
+      <StemDetail
+        detail={snapshot.stemDetail}
+        onClose={() => {
+          engine.selectedSourceId = null
+          engine.emitSnapshot()
+        }}
+      />
+      <ZoomBar
+        zoom={snapshot.cameraZoom}
+        onZoomIn={() => engine.zoomBy(1.28)}
+        onZoomOut={() => engine.zoomBy(0.78)}
+        onReset={() => engine.inspectTree(null)}
+      />
     </div>
   )
 }

@@ -45,7 +45,7 @@ export function ControlPanel(props: Props) {
       <header className="panel-header">
         <div className="kicker">ORGANISM</div>
         <h1>Living Tree</h1>
-        <p>4H and 1H compare live bias with last hour’s :29 close. 30m compares with the previous 30-minute close (:29 or :59). Green goes up, red goes down.</p>
+        <p>Click a tree or stem to zoom into its 4H window. Each stem compares the :29 bias at the start of that window with the current bias.</p>
       </header>
       <section className="panel-block">
         <label className="check">
@@ -85,10 +85,10 @@ export function ControlPanel(props: Props) {
       <section className="panel-block">
         <h2>Camera</h2>
         <div className="btn-row two">
-          <button className="ghost" onClick={() => props.onZoom(1.12)}>
+          <button className="ghost" onClick={() => props.onZoom(1.28)}>
             Zoom in
           </button>
-          <button className="ghost" onClick={() => props.onZoom(0.88)}>
+          <button className="ghost" onClick={() => props.onZoom(0.78)}>
             Zoom out
           </button>
         </div>
